@@ -28,6 +28,16 @@ spec:
               # namespace; we want every namespace to attach routes.
               namespacePolicy:
                 from: All
+        # Rendered as a TLSOption CRD named "default" in the traefik
+        # namespace, which Traefik applies to every TLS router that does
+        # not pick its own options. sniStrict refuses handshakes with no
+        # SNI or an SNI no certificate covers, so a port scanner cannot
+        # pull our certificate (and the hostnames on it) just by
+        # connecting. No listener terminates TLS yet; this is set ahead
+        # of time so it is in place when one does.
+        tlsOptions:
+          default:
+            sniStrict: true
         service:
           annotations:
             # Pin the LoadBalancer IP so DNS for *.fandango.cloud stays stable.
