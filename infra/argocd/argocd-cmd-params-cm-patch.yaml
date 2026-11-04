@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cmd-params-cm
+data:
+  # Serve plain HTTP and stop redirecting to HTTPS. TLS is terminated at
+  # the gateway (plain HTTP on the LAN until cert-manager is in place).
+  server.insecure: "true"

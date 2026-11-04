@@ -7,6 +7,8 @@ resources:
   - app-gateway-api.yaml
   - app-metallb.yaml
   - app-traefik.yaml
+  - httproute.yaml
   - https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.7/manifests/install.yaml
 patches:
   - path: argocd-cm-patch.yaml
+  - path: argocd-cmd-params-cm-patch.yaml
