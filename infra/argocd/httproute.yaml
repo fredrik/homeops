@@ -1,3 +1,6 @@
+# Fields the API server defaults (group, kind, weight, the catch-all path
+# match) are spelled out so the manifest matches the stored object and
+# ArgoCD does not report drift.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -5,11 +8,20 @@ metadata:
   namespace: argocd
 spec:
   parentRefs:
-    - name: traefik-gateway
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: traefik-gateway
       namespace: traefik
   hostnames:
     - argocd.fandango.cloud
   rules:
-    - backendRefs:
-        - name: argocd-server
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: argocd-server
           port: 80
+          weight: 1
