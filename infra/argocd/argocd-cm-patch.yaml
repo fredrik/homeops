@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+data:
+  # How often ArgoCD polls git for changes (default 180s)
+  timeout.reconciliation: 60s
