@@ -6,24 +6,9 @@ was true on 2026-11-04 evening. Verify anything cheap to verify before relying o
 
 ## How to work with Fredrik
 
-- Fredrik is learning by doing. You are the driver: you write the manifests and
-  commit at each logical step. He pushes and runs the cluster-facing commands
-  (kubectl checks, rollout restarts, anything interesting to watch). Hand him the
-  exact commands and the exact expected outcome.
-- Walk him through what each phase does and why, one phase at a time. Do not
-  dump all phases at once.
-- Every cluster change goes into this repo and through ArgoCD. Never
-  `kubectl apply`. The only direct kubectl actions so far have been
-  `rollout restart` after ConfigMap changes and one `annotate` for a hard refresh.
-- Read-only kubectl from you is fine and encouraged (context `admin@grove`).
-- He makes his own commits between your steps. Always read a file before
-  rewriting it. A heredoc overwrite of `infra/argocd/kustomization.yaml` once
-  dropped his patch entry.
-- Be precise about expected states. "OutOfSync then Synced within a minute" is
-  good. Promising "Synced" immediately after a push is wrong.
-- Commit messages end with `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>`.
-- He dislikes scope creep. Cilium is explicitly deferred. Do not propose CNI,
-  storage, or webhook work in this phase.
+Read `AGENTS.md` at the repo root first. It covers working style, the
+GitOps rules, and the gotchas. This file only adds what is specific to the
+cert-manager phase.
 
 ## Cluster facts
 
@@ -144,27 +129,6 @@ Phase 4: route over HTTPS and redirect HTTP
 - Flip the Certificate's issuerRef to `letsencrypt-prod` in its own commit.
 - Verify: `curl -sI http://argocd.fandango.cloud/` is a 301 to https,
   `curl -sI https://argocd.fandango.cloud/` is 200 with no `-k`, browser is happy.
-
-## Gotchas learned today
-
-- ArgoCD syncing a ConfigMap restarts nothing. argocd-server and the
-  application-controller read their keys into env only at pod start. Check the
-  key is live (`kubectl -n argocd get cm <name> -o jsonpath='{.data}'`) before
-  any `rollout restart`, or the pod starts with the old values.
-- A sync-wave inside the `argocd` Application blocks on health of everything in
-  earlier waves. A resource that can never become Healthy (an HTTPRoute pointing
-  at a nonexistent Gateway) stalls the operation forever. Terminate it from the
-  UI or `argocd app terminate-op`, fix, push.
-- `argocd --core` needs the kubeconfig context namespace set to `argocd` or it
-  fails with "configmap argocd-cm not found". Fredrik's context is on `default`.
-  Hard refresh without the CLI:
-  `kubectl -n argocd annotate application <app> argocd.argoproj.io/refresh=hard`.
-- Kustomize remote URLs to GitHub release assets work (they 302, kustomize
-  follows). Verify any kustomization locally with `kubectl kustomize <dir>` before
-  committing.
-- The three places to look when a sync misbehaves: the Application's
-  `status.operationState.message`, the application-controller log filtered on
-  the app name, and the component's own pod logs.
 
 ## Follow-ups already noted elsewhere, not for this phase
 
