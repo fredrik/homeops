@@ -1,0 +1,27 @@
+# Wave 1 so the pool is applied after MetalLB's controller and speaker are
+# healthy; MetalLB validates these objects through a webhook that must be up.
+# SkipDryRunOnMissingResource lets ArgoCD accept the manifest on the first
+# sync, before the CRD exists in the cluster.
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: default
+  namespace: metallb-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  addresses:
+    - 10.9.8.60-10.9.8.69
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: default
+  namespace: metallb-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  ipAddressPools:
+    - default
