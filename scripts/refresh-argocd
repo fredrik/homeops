@@ -1,11 +1,7 @@
 #!/usr/bin/env bash
 # Ask ArgoCD to re-read Git now instead of waiting for the 60s poll plus
 # the repo-server's revision cache. "hard" also bypasses that cache.
-# Usage: scripts/refresh-argocd [app ...]   (default: the app-of-apps "argocd")
-# Note: a child app only re-reads its own folder when refreshed itself, e.g.
-# scripts/refresh-argocd cert-manager-config
+# Usage: git push && scripts/refresh-argocd
 set -euo pipefail
-for app in "${@:-argocd}"; do
-  kubectl --context admin@grove -n argocd annotate application "$app" \
-    argocd.argoproj.io/refresh=hard --overwrite
-done
+kubectl --context admin@grove -n argocd annotate application argocd \
+  argocd.argoproj.io/refresh=hard --overwrite
