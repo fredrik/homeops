@@ -2,8 +2,9 @@
 
 Written 2026-11-07. Amended the same day after two independent reviews, both
 checked against the live cluster, the three chart tarballs, the ArgoCD docs and
-the v3.5.7 source. The amendments are summarised at the end. Status: agreed, not
-started.
+the v3.5.7 source. The amendments are summarised at the end. Amended again after
+the bootstrap decision; see the last section. Status: in progress, phases 0 and
+1 done 2026-11-07.
 
 ## Why
 
@@ -27,10 +28,11 @@ touch a kustomization and a values file and nothing else.
 ## Target layout
 
 ```
+bootstrap/                  the hand-written root Application and the two
+                            ApplicationSets below; the one directory applied
+                            by hand on a fresh cluster
 infra/                      what the cluster needs before it can run anything
-  argocd/                   install, ConfigMap patches, UI HTTPRoutes, the
-                            hand-written root Application, and the two
-                            ApplicationSets below
+  argocd/                   install, ConfigMap patches, UI HTTPRoutes
   gateway-api/
   metallb/
   traefik/                  kustomization with helmCharts + values.yaml
@@ -46,9 +48,9 @@ scripts/
 Rules the layout implies:
 
 - Every directory under `infra/` and `apps/` is a kustomization and becomes
-  exactly one ArgoCD Application, named after the directory. The one exception
-  is `infra/argocd`, whose Application is hand-written; see "Two trees, two
-  ApplicationSets" for why.
+  exactly one ArgoCD Application, named after the directory. No exceptions:
+  `infra/argocd` is generated like the rest. The only hand-written Application
+  is the root in `bootstrap/`; see "Two trees, two ApplicationSets" for why.
 - A directory owns everything about its component: its Namespace manifest when
   it owns a namespace, its HTTPRoutes, its chart and values. Nothing about a
   component lives anywhere else.
@@ -64,42 +66,45 @@ Rules the layout implies:
 
 ### Two trees, two ApplicationSets
 
-`infra/argocd/` gets two ApplicationSets, each with a git directory generator:
-one over `infra/*`, one over `apps/*`. Each stamps out an Application from a
-single template. Adding a component becomes "create a directory". The
-`syncPolicy` repetition across the `app-*.yaml` files goes away because the
-template is written once.
+`bootstrap/` holds two ApplicationSets, each with a git directory generator: one
+over `infra/*`, one over `apps/*`. Each stamps out an Application from a single
+template. Adding a component becomes "create a directory". The `syncPolicy`
+repetition across the `app-*.yaml` files goes away because the template is
+written once.
 
 Two sets rather than one so the trees can later differ: separate ArgoCD
 projects, different sync behaviour, a different branch for apps. Not needed
 today, cheap to have from the start. One set with two `path` globs would be the
 drier version; splitting later is a five-minute change.
 
-The root Application `argocd` stays hand-written in `application.yaml` and the
-infra generator excludes its directory:
+The root Application is hand-written, named `bootstrap`, and syncs `bootstrap/`,
+the directory that contains it and the two sets. It is the only Application that
+is not generated. `infra/argocd` is an ordinary component: the infra set
+generates an Application `argocd` for it, which manages the ArgoCD install the
+same way the hand-written one does today.
 
-```yaml
-directories:
-  - path: infra/*
-  - path: infra/argocd
-    exclude: true
+The root is hand-written because of garbage collection. A generated Application
+carries an ownerReference to its ApplicationSet, and
+`preserveResourcesOnDeletion` keeps the resources, not the Applications. If the
+infra set were ever pruned by a bad commit, renamed (a rename is a delete plus a
+create) or deleted by hand, Kubernetes would delete every generated Application,
+including `argocd`. The ArgoCD install itself survives, because no generated
+Application carries a finalizer, and so does the root, because it is not
+generated. On its next poll the root recreates the set, the set regenerates
+`argocd`, and `argocd` adopts the install again. The mistake heals itself on the
+next push with no manual step. What matters for that property is that the root
+is hand-written, not which directory it lives in.
+
+A fresh cluster is bootstrapped with two commands, each with one job:
+
+```
+kubectl --context admin@grove apply --server-side -k infra/argocd   # install ArgoCD
+kubectl --context admin@grove apply --server-side -k bootstrap      # root Application and the sets
 ```
 
-The reason is garbage collection. A generated Application carries an
-ownerReference to its ApplicationSet, and `preserveResourcesOnDeletion` keeps
-the resources, not the Applications. If the infra set were ever pruned by a bad
-commit, renamed (a rename is a delete plus a create) or deleted by hand,
-Kubernetes would delete every generated Application, including the one that
-manages ArgoCD. Nothing would then apply the fix commit, and the cluster would
-need a manual bootstrap again. With the root Application outside the set, the
-same mistake heals itself on the next push, because the root is still alive and
-recreates the set. ArgoCD keeps managing itself exactly as it does now.
-
-A fresh cluster is bootstrapped with
-`kubectl apply --server-side -k infra/argocd`, run twice: the first pass
-installs ArgoCD and fails on the ApplicationSets because their CRD is not
-established yet, the second pass creates them. Nothing is applied by hand after
-that.
+The second needs a retry if it runs before the CRDs from the first are
+established. Nothing is applied by hand after that. This is the one exception to
+the "never kubectl apply" rule, and AGENTS.md documents it as such.
 
 ### Ordering by retry, not sync wave
 
@@ -337,10 +342,6 @@ spec:
         revision: main
         directories:
           - path: infra/*
-          # The root Application lives here, hand-written, so that deleting
-          # this set can never delete the thing that recreates it.
-          - path: infra/argocd
-            exclude: true
   template:
     metadata:
       name: "{{ .path.basename }}"
@@ -373,7 +374,7 @@ spec:
 
 `goTemplate: true` with `missingkey=error` is what the docs recommend; the
 legacy template engine is slated for deprecation. The apps set is the same with
-`apps/*` and no exclusion.
+`apps/*`.
 
 ## Migration phases
 
@@ -412,27 +413,42 @@ over per phase when it is run, as usual.
 
   Second push: restore `automated`.
 
-- **Phase 3. Swap the app-of-apps for the ApplicationSets.** In one commit: add
-  `appset-infra.yaml` and `appset-apps.yaml` to `infra/argocd`, remove the six
-  `app-*.yaml`, keep `application.yaml`, and update the kustomization. Create
-  `apps/.gitkeep` so the tree exists. Expected: the root Application prunes the
-  six child Applications (resources are orphaned, not deleted, because no
-  Application carries a finalizer) and creates the two ApplicationSets; the sets
-  create six Applications with the same names; each adopts its existing
-  resources on the first sync and goes Synced. Within one sync gitops-engine
-  runs every prune before any create, so there is a window of a minute or so
-  where the six Applications do not exist. The root Application never deletes
-  itself, so the cluster is never without a manager. Applications are deleted
-  and recreated during the swap. Resources are not. Test the ApplicationSet
-  refresh annotation here.
+- **Phase 3. Swap the app-of-apps for the ApplicationSets.** Two pushes and one
+  hand apply.
+
+  First push: add `bootstrap/` with its kustomization, the root Application
+  `bootstrap` and the two ApplicationSets, with the infra set temporarily
+  excluding `infra/argocd`. Remove the six `app-*.yaml` from `infra/argocd` and
+  update its kustomization; `application.yaml` stays for now. Create
+  `apps/.gitkeep` so the tree exists. After the push, Fredrik runs
+  `kubectl apply --server-side -k bootstrap` once, from the pushed revision.
+  Expected: the old root `argocd` prunes the six child Applications (resources
+  are orphaned, not deleted, because no Application carries a finalizer); the
+  new root `bootstrap` syncs itself and the sets; the infra set creates six
+  Applications with the same names; each adopts its existing resources on the
+  first sync and goes Synced. There is a window of a few minutes where some of
+  the six do not exist. Test the ApplicationSet refresh annotation here.
+
+  Second push: remove `application.yaml` from `infra/argocd` and the exclusion
+  from the infra set. Expected: the set generates `argocd`, which adopts the
+  install. Whether the old hand-written `argocd` prunes itself when its manifest
+  leaves git, or refuses to and is adopted by the set instead, is not verified;
+  the end state is the same either way, only what the UI shows during the swap
+  differs. Applications are deleted and recreated during the swap. Resources are
+  not.
 
 - **Phase 4. Rewrite the docs and the script.** AGENTS.md: replace the Repo
   layout section and the New components rule, rewrite the sync wave gotcha as a
   retry gotcha including the exhaustion-is-terminal recovery step, add the
-  discovery lag gotcha, drop the "template" wording about the HTTPRoute.
-  STATUS.md: components table without waves, note the ApplicationSets, close the
-  child-health known issue, remove the syncOptions repetition known issue.
-  `scripts/refresh-argocd`: add the ApplicationSet refresh.
+  discovery lag gotcha, drop the "template" wording about the HTTPRoute, add the
+  `bootstrap/` carve-out to the kubectl apply rule, and switch the mdformat rule
+  to `uvx --with mdformat-gfm mdformat --wrap 80` because plain mdformat
+  flattens tables. STATUS.md: components table without waves, note the
+  ApplicationSets and the bootstrap, close the child-health known issue, the
+  syncOptions repetition known issue and the finalizer open decision.
+  `scripts/refresh-argocd`: add the ApplicationSet refresh, and take the
+  Application to hard-refresh as an argument, because component values no longer
+  live under the root's directory.
 
 The earlier plan had a separate phase for giving every directory its Namespace.
 With the corrected namespace rule only `traefik` and `cert-manager` ship one,
@@ -493,11 +509,33 @@ Text corrections:
 
 Open choices, each with the default this plan takes:
 
-- Root Application and sets in `infra/argocd` (taken) or in a separate
-  `bootstrap/` directory with `infra/argocd` generated like any other component.
-  The latter costs a second kind of apply on a fresh cluster.
+- Root Application and sets in `infra/argocd` or in a separate `bootstrap/`
+  directory with `infra/argocd` generated like any other component. Decided for
+  `bootstrap/` on 2026-11-07; see the next section.
 - Two ApplicationSets (taken) or one with two globs.
 - Finite retry limit (taken) or unlimited.
 - `preserveResourcesOnDeletion` on the apps set too (taken, and right for
   anything with a PVC) or cascade so that removing an app's directory removes
   its namespace.
+
+## Amendment 2026-11-07: dedicated bootstrap directory
+
+Fredrik chose the `bootstrap/` layout over the plan's default, and the text
+above now describes it. The reasoning, for the record:
+
+- The safety argument for a hand-written root is about the root being
+  hand-written, not about where it lives. A `bootstrap/` root gives the same
+  self-healing after a deleted or renamed ApplicationSet.
+- The `infra/` tree becomes uniform. Every directory is generated and the
+  exclusion rule in the infra set disappears. `infra/argocd` is "ArgoCD" and
+  nothing more, which is what the Why section asked for.
+- Bootstrapping a fresh cluster is two commands with one job each, instead of
+  the same command twice with the first expected to fail halfway.
+- `bootstrap/` is the one place a newcomer reads to learn how the cluster is
+  wired, and it almost never changes. A `clusters/` layer later, if ever, is a
+  bootstrap per cluster.
+
+What it costs: two Applications to know about, `bootstrap` (hand-written) and
+`argocd` (generated); one more push in phase 3 to hand `argocd` over from
+hand-written to generated; and one documented `kubectl apply` on a fresh
+cluster, the same command the migration runs once.

@@ -93,13 +93,13 @@ ApplicationSets, with Helm charts rendered through kustomize `helmCharts` so
 every component is a directory. Plan and reasoning in
 `docs/plans/repo-layout.md`. Started 2026-11-07.
 
-| Phase | What                                                                         | State                                                                               |
-| ----- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| 0     | `.gitignore` for the `charts/` kustomize pulls                               | committed                                                                           |
-| 1     | `kustomize.buildOptions: --enable-helm` in `argocd-cm`                       | committed, awaiting push and verification                                           |
-| 2     | porkbun-webhook, cert-manager, traefik converted to `helmCharts` directories | not started                                                                         |
-| 3     | app-of-apps replaced by ApplicationSets                                      | not started; where the root lives (`infra/argocd` or `bootstrap/`) is being decided |
-| 4     | AGENTS.md, this file, `scripts/refresh-argocd`                               | not started                                                                         |
+| Phase | What                                                                                     | State                                        |
+| ----- | ---------------------------------------------------------------------------------------- | -------------------------------------------- |
+| 0     | `.gitignore` for the `charts/` kustomize pulls                                           | done                                         |
+| 1     | `kustomize.buildOptions: --enable-helm` in `argocd-cm`                                   | done, key verified live                      |
+| 2     | porkbun-webhook, cert-manager, traefik converted to `helmCharts` directories             | not started                                  |
+| 3     | app-of-apps replaced by ApplicationSets, root Application and sets in a new `bootstrap/` | not started; `bootstrap/` decided 2026-11-07 |
+| 4     | AGENTS.md, this file, `scripts/refresh-argocd`                                           | not started                                  |
 
 ## Known issues and open decisions
 
