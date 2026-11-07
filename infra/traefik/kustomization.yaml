@@ -1,0 +1,25 @@
+# Traefik v3 as the Gateway API implementation, rendered from its Helm chart
+# by kustomize's helmCharts field so this component is a directory like
+# every other one. Values live in values.yaml beside this file; the legacy
+# Ingress provider is off there on purpose so routes are always HTTPRoutes.
+#
+# This directory owns the traefik namespace and ships its manifest.
+#
+# No top-level namespace: the chart namespaces every resource itself from
+# the entry below. releaseName and namespace must both be exact, because
+# the chart joins them into the app.kubernetes.io/instance label
+# (traefik-traefik) that sits in the Deployment's selector, which is
+# immutable.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+helmCharts:
+  - name: traefik
+    repo: https://traefik.github.io/charts
+    version: 42.3.0
+    releaseName: traefik
+    namespace: traefik
+    valuesFile: values.yaml
+    # The chart ships its 25 CRDs in crds/, which helm template leaves out
+    # unless asked. Without this ArgoCD would prune every Traefik CRD,
+    # including the kind of the default TLSOption below.
+    includeCRDs: true

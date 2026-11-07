@@ -1,0 +1,43 @@
+providers:
+  kubernetesGateway:
+    enabled: true
+  kubernetesIngress:
+    enabled: false
+gateway:
+  listeners:
+    web:
+      # Chart default only admits HTTPRoutes from the traefik namespace; we
+      # want every namespace to attach routes.
+      namespacePolicy:
+        from: All
+    # HTTPS on the Service's 443 (container port 8443, already in the
+    # chart's ports). Terminates TLS with the wildcard cert that cert-manager
+    # keeps in Secret fandango-cloud-tls in this namespace. The chart refuses
+    # to render an HTTPS listener without certificateRefs, so this exists
+    # only because the Secret already does.
+    websecure:
+      port: 8443
+      protocol: HTTPS
+      hostname: "*.fandango.cloud"
+      namespacePolicy:
+        from: All
+      # Spelled out as the API server defaults them, so ArgoCD sees no
+      # drift (same lesson as the HTTPRoutes).
+      mode: Terminate
+      certificateRefs:
+        - group: ""
+          kind: Secret
+          name: fandango-cloud-tls
+# Rendered as a TLSOption CRD named "default" in the traefik namespace,
+# which Traefik applies to every TLS router that does not pick its own
+# options. sniStrict refuses handshakes with no SNI or an SNI no
+# certificate covers, so a port scanner cannot pull our certificate (and
+# the hostnames on it) just by connecting. Applies to the websecure
+# listener above.
+tlsOptions:
+  default:
+    sniStrict: true
+service:
+  annotations:
+    # Pin the LoadBalancer IP so DNS for *.fandango.cloud stays stable.
+    metallb.io/loadBalancerIPs: 10.9.8.60

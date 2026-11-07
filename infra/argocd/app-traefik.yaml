@@ -1,6 +1,9 @@
-# Traefik v3 as the Gateway API implementation. ArgoCD renders the Helm
-# chart itself; values live here. The legacy Ingress provider is off on
-# purpose so routes are always HTTPRoutes.
+# Traefik v3 as the Gateway API implementation. The chart and its values
+# are in infra/traefik/.
+#
+# Automated sync is off during the switch from chart source to directory
+# source, so a wrong render shows as a diff in the UI instead of being
+# applied. It comes back in the next commit.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -11,63 +14,13 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://traefik.github.io/charts
-    chart: traefik
-    targetRevision: 42.3.0
-    helm:
-      valuesObject:
-        providers:
-          kubernetesGateway:
-            enabled: true
-          kubernetesIngress:
-            enabled: false
-        gateway:
-          listeners:
-            web:
-              # Chart default only admits HTTPRoutes from the traefik
-              # namespace; we want every namespace to attach routes.
-              namespacePolicy:
-                from: All
-            # HTTPS on the Service's 443 (container port 8443, already in
-            # the chart's ports). Terminates TLS with the wildcard cert that
-            # cert-manager keeps in Secret fandango-cloud-tls in this
-            # namespace. The chart refuses to render an HTTPS listener
-            # without certificateRefs, so this exists only because the
-            # Secret already does.
-            websecure:
-              port: 8443
-              protocol: HTTPS
-              hostname: "*.fandango.cloud"
-              namespacePolicy:
-                from: All
-              # Spelled out as the API server defaults them, so ArgoCD
-              # sees no drift (same lesson as the HTTPRoutes).
-              mode: Terminate
-              certificateRefs:
-                - group: ""
-                  kind: Secret
-                  name: fandango-cloud-tls
-        # Rendered as a TLSOption CRD named "default" in the traefik
-        # namespace, which Traefik applies to every TLS router that does
-        # not pick its own options. sniStrict refuses handshakes with no
-        # SNI or an SNI no certificate covers, so a port scanner cannot
-        # pull our certificate (and the hostnames on it) just by
-        # connecting. Applies to the websecure listener above.
-        tlsOptions:
-          default:
-            sniStrict: true
-        service:
-          annotations:
-            # Pin the LoadBalancer IP so DNS for *.fandango.cloud stays stable.
-            metallb.io/loadBalancerIPs: 10.9.8.60
+    repoURL: https://github.com/fredrik/homeops.git
+    targetRevision: main
+    path: infra/traefik
   destination:
     server: https://kubernetes.default.svc
     namespace: traefik
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
     syncOptions:
-      - CreateNamespace=true
       - ServerSideApply=true
       - ServerSideDiff=true
