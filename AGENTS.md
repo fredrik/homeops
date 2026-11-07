@@ -21,7 +21,7 @@ Cluster facts, what is built and what is next live in STATUS.md.
 - One phase at a time. Explain what the phase does and why, then hand over the
   commands. Never dump all phases at once.
 - No scope creep. Deliver the phase that was asked for. Tempting adjacent work
-  goes in the Follow-ups section below.
+  gets suggested as follow-up work.
 - Commits also land between agent steps. Start every session with `git status`
   and `git log`. Read a file before changing it. Prefer targeted edits over
   whole-file rewrites; a heredoc overwrite once dropped a patch from a

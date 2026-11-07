@@ -78,8 +78,8 @@ hard-refreshes the app-of-apps after a push.
    API support, Porkbun DNS-01 webhook, Let's Encrypt issuers and the wildcard
    Certificate (staging first, then production), the `websecure` listener, and
    HTTPS routing with HTTP redirect.
-1. **Housekeeping.** `scripts/refresh-argocd`, AGENTS.md rewritten with verified
-   cluster facts, repo layout, gotchas and follow-ups.
+1. **Housekeeping.** AGENTS.md rewritten with verified cluster facts, repo
+   layout, gotchas and follow-ups.
 
 ## Known issues and open decisions
 
