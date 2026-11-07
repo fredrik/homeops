@@ -22,6 +22,10 @@ spec:
   template:
     metadata:
       name: "{{ .path.basename }}"
+      labels:
+        # Which tree the Application came from, for the UI's label filter
+        # and kubectl -l. The name alone does not say.
+        homeops.fandango.cloud/tree: apps
     spec:
       project: default
       source:

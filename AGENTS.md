@@ -48,7 +48,10 @@ scripts/     refresh-argocd
   exactly one ArgoCD Application named after the directory. The ApplicationSets
   in `bootstrap/` stamp them out from one template, so there is nothing to
   register: adding a component is creating a directory. `infra/argocd` is
-  generated like the rest; ArgoCD manages its own install through it.
+  generated like the rest; ArgoCD manages its own install through it. Every
+  generated Application carries the label `homeops.fandango.cloud/tree` set to
+  `infra` or `apps`, so the two trees can be told apart in the UI and with
+  `kubectl -l`.
 - The only hand-written Application is `bootstrap`, which syncs `bootstrap/`
   including itself. It is hand-written so that deleting or renaming an
   ApplicationSet (which garbage-collects every Application it generated) heals
