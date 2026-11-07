@@ -4,5 +4,6 @@ metadata:
   name: argocd-cmd-params-cm
 data:
   # Serve plain HTTP and stop redirecting to HTTPS. TLS is terminated at
-  # the gateway (plain HTTP on the LAN until cert-manager is in place).
+  # the Traefik Gateway (websecure listener, cert-manager wildcard cert),
+  # so inside the cluster argocd-server only ever sees plain HTTP.
   server.insecure: "true"
