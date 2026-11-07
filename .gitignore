@@ -1,0 +1,5 @@
+# Kustomize's helmCharts field pulls each chart into charts/ beside the
+# kustomization and silently reuses whatever is there, without checking the
+# version. A committed copy would pin a stale chart. This only affects local
+# renders: the repo-server starts from a clean checkout on every revision.
+charts/
