@@ -16,7 +16,7 @@ spec:
     solvers:
       - dns01:
           webhook:
-            # Must match groupName in infra/argocd/app-porkbun-webhook.yaml.
+            # Must match groupName in infra/porkbun-webhook/values.yaml.
             groupName: acme.fandango.cloud
             solverName: porkbun
             config:

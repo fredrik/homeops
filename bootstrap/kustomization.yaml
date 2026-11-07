@@ -4,9 +4,17 @@
 #   kubectl --context admin@grove apply --server-side -k infra/argocd
 #   kubectl --context admin@grove apply --server-side -k bootstrap
 #
+# The first command exits non-zero: infra/argocd carries the UI's HTTPRoutes
+# and the Gateway API CRDs do not exist yet, so kubectl applies everything
+# else and reports two "resource mapping not found" errors. That is
+# expected; the generated argocd Application retries the routes once
+# gateway-api is in. The second command needs a retry if the ArgoCD CRDs
+# from the first are not established yet.
+#
 # From then on the root Application below syncs this directory, including
 # itself, and the two ApplicationSets discover everything under infra/ and
-# apps/. Nothing else is ever applied by hand.
+# apps/. The only other hand-made objects are the Secrets documented in the
+# kustomization headers that need them.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: argocd

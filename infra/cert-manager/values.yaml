@@ -2,9 +2,10 @@ crds:
   # Let the chart ship its CRDs so ArgoCD manages them with the rest.
   enabled: true
   # Keep the CRDs if the release is ever removed. Deleting them would
-  # garbage-collect every Certificate and Issuer in the cluster. This is a
-  # Helm-ism (helm.sh/resource-policy) that ArgoCD ignores; the ArgoCD
-  # equivalent is a Prune=false sync option on the CRDs, a follow-up.
+  # garbage-collect every Certificate and Issuer in the cluster. Renders as
+  # helm.sh/resource-policy: keep, which ArgoCD honours on cascade deletion
+  # of the Application (where it skips CRDs anyway) but not on prune during
+  # a sync; a Prune=false sync option on the CRDs would cover that case.
   keep: true
 config:
   # Lets cert-manager watch Gateway API objects, so a Gateway can request

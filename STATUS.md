@@ -137,12 +137,14 @@ ApplicationSets and hard-refreshes Applications after a push.
   `argocd.fandango.cloud` succeeds.
 - **Planning format is undecided.** One proposal is a root ROADMAP.md (Now /
   Next / Later / Done) with a Planning rule in AGENTS.md replacing the
-  handover-prompt convention. AGENTS.md still describes handover prompts. No
-  ROADMAP.md has been written.
-- **`crds.keep: true` in the cert-manager values is a Helm-ism** ArgoCD ignores.
-  The ArgoCD equivalent is a kustomize patch adding
-  `argocd.argoproj.io/sync-options: Prune=false` to the CRDs, now possible
-  because the chart renders through kustomize.
+  handover-prompt convention. No ROADMAP.md has been written.
+- **`crds.keep: true` in the cert-manager values only half applies.** Checked
+  against the v3.5.7 source: on cascade deletion of an Application ArgoCD skips
+  CRDs altogether and also honours `helm.sh/resource-policy: keep`, but prune
+  during a sync ignores the annotation, so flipping `crds.enabled` to false
+  would still delete every CRD and with them every Certificate. The ArgoCD guard
+  for that case is a kustomize patch adding
+  `argocd.argoproj.io/sync-options: Prune=false` to the CRDs.
 
 ## What is possibly next
 

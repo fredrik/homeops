@@ -12,8 +12,7 @@ Cluster facts, what is built and what is next live in STATUS.md.
 - Three obvious roles: decide what's next, write the code, run the code.
 - Fredrik plans and decides the next task.
 - The agent writes the manifests and commits at each logical step.
-- Fredrik pushes and runs every cluster-facing command. The agent never pushes
-  unless Fredrik says so for a given stretch of work.
+- Fredrik pushes and runs every cluster-facing command. The agent never pushes.
 
 ### Detailed instructions for the agent
 
@@ -55,7 +54,9 @@ scripts/     refresh-argocd
 - The only hand-written Application is `bootstrap`, which syncs `bootstrap/`
   including itself. It is hand-written so that deleting or renaming an
   ApplicationSet (which garbage-collects every Application it generated) heals
-  on the next sync instead of needing a manual bootstrap.
+  by itself within a few reconcile cycles, instead of needing a manual
+  bootstrap. A rename shows an error on the new set until garbage collection has
+  released the old Applications.
 - A directory owns everything about its component: its Namespace manifest when
   it owns a namespace, its HTTPRoutes, its chart and values. One directory per
   namespace; `porkbun-webhook` lives in cert-manager's namespace and ships no
@@ -71,9 +72,14 @@ scripts/     refresh-argocd
   resource belongs in that namespace, like `infra/argocd`.
 - In prose, things under `infra/` are "components" and things under `apps/` are
   "apps". Both are Applications in ArgoCD's vocabulary.
-- A fresh cluster is bootstrapped with two commands and nothing after:
+- A fresh cluster is bootstrapped with two commands:
   `kubectl --context admin@grove apply --server-side -k infra/argocd`, then
-  `kubectl --context admin@grove apply --server-side -k bootstrap`.
+  `kubectl --context admin@grove apply --server-side -k bootstrap`. The first
+  exits non-zero on the two HTTPRoutes because the Gateway API CRDs are not
+  there yet; everything else is applied, and the routes land through ArgoCD's
+  retry once `gateway-api` is in. After that only the hand-made Secrets below
+  are created outside ArgoCD. The header of `bootstrap/kustomization.yaml`
+  spells it out.
 
 ## Rules for the cluster
 
@@ -96,8 +102,14 @@ scripts/     refresh-argocd
 - New components: create the directory with a kustomization. Sync policy comes
   from the ApplicationSet template (automated prune and selfHeal,
   ServerSideApply, ServerSideDiff, retry); do not add per-component overrides.
-  Copy `infra/porkbun-webhook/` for a Helm chart, `infra/metallb/` for an
-  upstream manifest.
+  Copy `infra/traefik/` for a Helm chart that owns its namespace (Namespace
+  manifest, `helmCharts`, `includeCRDs`), `infra/porkbun-webhook/` for one that
+  lives in another component's namespace, `infra/metallb/` for an upstream
+  manifest. The directory name becomes the Application name, so it must be a
+  valid DNS label (lowercase, digits, hyphens, at most 63 characters), unique
+  across both trees, and never `bootstrap`, which the generators exclude. Every
+  namespaced resource must carry its namespace; the template's destination
+  namespace is the directory name and exists for nothing.
 - Cross-component ordering has no sync waves. A component that needs another
   one's CRDs fails its first syncs and succeeds on retry once they exist. Keep a
   CRD and its custom resources in one directory when you can; gitops-engine then

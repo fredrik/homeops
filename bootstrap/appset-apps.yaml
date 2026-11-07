@@ -19,6 +19,9 @@ spec:
         revision: main
         directories:
           - path: apps/*
+          # Same guard as the infra set: the root's name is reserved.
+          - path: apps/bootstrap
+            exclude: true
   template:
     metadata:
       name: "{{ .path.basename }}"
@@ -34,6 +37,9 @@ spec:
         path: "{{ .path.path }}"
       destination:
         server: https://kubernetes.default.svc
+        # Only used for resources that carry no namespace. An app's
+        # manifests must namespace themselves (and ship the Namespace);
+        # a resource landing here fails loudly with "namespace not found".
         namespace: "{{ .path.basename }}"
       syncPolicy:
         automated:

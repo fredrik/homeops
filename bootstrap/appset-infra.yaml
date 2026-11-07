@@ -30,6 +30,10 @@ spec:
         revision: main
         directories:
           - path: infra/*
+          # A generated Application named bootstrap would be adopted onto
+          # the hand-written root and rewrite it. Never allow the name.
+          - path: infra/bootstrap
+            exclude: true
   template:
     metadata:
       name: "{{ .path.basename }}"
