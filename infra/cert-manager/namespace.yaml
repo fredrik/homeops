@@ -1,0 +1,7 @@
+# This directory owns the cert-manager namespace. It used to be created by
+# ArgoCD's CreateNamespace sync option, which leaves it unmanaged; shipping
+# the manifest makes it an ordinary tracked resource of this component.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cert-manager
