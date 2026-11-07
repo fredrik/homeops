@@ -2,10 +2,6 @@
 # serving certificate through cert-manager and so needs the CRDs from wave 4.
 # The chart, its values and the hand-made Secret it needs are documented in
 # infra/porkbun-webhook/.
-#
-# Automated sync is off during the switch from chart source to directory
-# source, so a wrong render shows as a diff in the UI instead of being
-# applied. It comes back in the next commit.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -23,6 +19,9 @@ spec:
     server: https://kubernetes.default.svc
     namespace: cert-manager
   syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
     syncOptions:
       - ServerSideApply=true
       - ServerSideDiff=true
