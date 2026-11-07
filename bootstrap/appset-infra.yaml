@@ -1,0 +1,64 @@
+# One Application per directory under infra/, named after the directory.
+# Adding a component is creating a directory with a kustomization; the git
+# directory generator re-lists the repo every three minutes, or at once when
+# scripts/refresh-argocd annotates this set.
+#
+# There are no sync waves between generated Applications: a wave orders
+# resources inside one sync, and these Applications are created by a
+# controller, not synced by a parent. Ordering comes from the retry block
+# in the template instead. A component whose CRDs are not there yet fails
+# its sync, backs off and succeeds once the component that ships them is
+# in. The budget below is about half an hour, sized for a fresh bootstrap.
+# Retry exhaustion is terminal: ArgoCD will not auto-sync a revision whose
+# last attempt failed, so the recovery is a manual sync or a new commit.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: infra
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  syncPolicy:
+    # No resources finalizer on generated Applications: removing a directory
+    # removes the Application and orphans its resources. Cleaning those up,
+    # cluster-scoped ones included, is a deliberate manual step.
+    preserveResourcesOnDeletion: true
+  generators:
+    - git:
+        repoURL: https://github.com/fredrik/homeops.git
+        revision: main
+        directories:
+          - path: infra/*
+          # Temporary, removed in the next commit: infra/argocd is still
+          # managed by the hand-written Application it contains.
+          - path: infra/argocd
+            exclude: true
+  template:
+    metadata:
+      name: "{{ .path.basename }}"
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/fredrik/homeops.git
+        targetRevision: main
+        path: "{{ .path.path }}"
+      destination:
+        server: https://kubernetes.default.svc
+        # Only used for resources that carry no namespace. Every directory
+        # namespaces its own resources, so a resource landing here is a bug
+        # that fails loudly with "namespace not found".
+        namespace: "{{ .path.basename }}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - ServerSideApply=true
+          - ServerSideDiff=true
+        retry:
+          limit: 10
+          backoff:
+            duration: 10s
+            factor: 2
+            maxDuration: 5m

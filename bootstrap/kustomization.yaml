@@ -1,0 +1,16 @@
+# The one directory applied by hand on a fresh cluster, after infra/argocd
+# has installed ArgoCD:
+#
+#   kubectl --context admin@grove apply --server-side -k infra/argocd
+#   kubectl --context admin@grove apply --server-side -k bootstrap
+#
+# From then on the root Application below syncs this directory, including
+# itself, and the two ApplicationSets discover everything under infra/ and
+# apps/. Nothing else is ever applied by hand.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: argocd
+resources:
+  - application.yaml
+  - appset-infra.yaml
+  - appset-apps.yaml
