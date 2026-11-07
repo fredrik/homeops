@@ -1,0 +1,8 @@
+# API group this webhook registers with the apiserver. Must match the
+# groupName in every ClusterIssuer that uses the solver.
+groupName: acme.fandango.cloud
+rbac:
+  secretAccess:
+    # Namespaced Role, "get" only, restricted to this one Secret.
+    secretNames:
+      - porkbun-api-credentials

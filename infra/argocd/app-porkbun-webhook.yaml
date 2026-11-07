@@ -1,11 +1,11 @@
-# DNS-01 solver webhook for Porkbun, which cert-manager has no built-in
-# provider for. Maintained fork (octabits-io) of Talinx's webhook. Wave 5
-# because the chart issues its own serving certificate through cert-manager
-# and so needs the CRDs from wave 4.
+# DNS-01 solver webhook for Porkbun. Wave 5 because the chart issues its own
+# serving certificate through cert-manager and so needs the CRDs from wave 4.
+# The chart, its values and the hand-made Secret it needs are documented in
+# infra/porkbun-webhook/.
 #
-# Credentials are NOT in Git. Before this can solve anything, the Secret
-# porkbun-api-credentials (keys api-key, secret-key) must exist in the
-# cert-manager namespace, created by hand with kubectl.
+# Automated sync is off during the switch from chart source to directory
+# source, so a wrong render shows as a diff in the UI instead of being
+# applied. It comes back in the next commit.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -16,26 +16,13 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://porkbun.octabits.io
-    chart: cert-manager-webhook-porkbun
-    targetRevision: 2.0.8
-    helm:
-      valuesObject:
-        # API group this webhook registers with the apiserver. Must match
-        # the groupName in every ClusterIssuer that uses the solver.
-        groupName: acme.fandango.cloud
-        rbac:
-          secretAccess:
-            # Namespaced Role, "get" only, restricted to this one Secret.
-            secretNames:
-              - porkbun-api-credentials
+    repoURL: https://github.com/fredrik/homeops.git
+    targetRevision: main
+    path: infra/porkbun-webhook
   destination:
     server: https://kubernetes.default.svc
     namespace: cert-manager
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
     syncOptions:
       - ServerSideApply=true
       - ServerSideDiff=true

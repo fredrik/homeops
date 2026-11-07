@@ -1,0 +1,27 @@
+# DNS-01 solver webhook for Porkbun, which cert-manager has no built-in
+# provider for. Maintained fork (octabits-io) of Talinx's webhook. Rendered
+# by kustomize's helmCharts field so this component is a directory like
+# every other one; values live in values.yaml beside this file.
+#
+# Credentials are NOT in Git. Before this can solve anything, the Secret
+# porkbun-api-credentials (keys api-key, secret-key) must exist in the
+# cert-manager namespace, created by hand with kubectl.
+#
+# No top-level namespace: it would rewrite the kube-system RoleBinding this
+# chart creates on purpose (it reads the API server's request-header CA).
+# The chart namespaces every resource itself from the entry below. No
+# Namespace manifest either: cert-manager owns that namespace, and two
+# Applications managing one resource would fight over the tracking
+# annotation.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+helmCharts:
+  - name: cert-manager-webhook-porkbun
+    repo: https://porkbun.octabits.io
+    version: 2.0.8
+    # ArgoCD's native Helm source named the release after the Application.
+    # The chart derives every resource name from the release name, so keeping
+    # it makes the switch from chart source to directory a no-op diff.
+    releaseName: porkbun-webhook
+    namespace: cert-manager
+    valuesFile: values.yaml
