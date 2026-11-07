@@ -30,10 +30,6 @@ spec:
         revision: main
         directories:
           - path: infra/*
-          # Temporary, removed in the next commit: infra/argocd is still
-          # managed by the hand-written Application it contains.
-          - path: infra/argocd
-            exclude: true
   template:
     metadata:
       name: "{{ .path.basename }}"
