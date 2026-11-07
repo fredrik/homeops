@@ -1,7 +1,22 @@
 #!/usr/bin/env bash
 # Ask ArgoCD to re-read Git now instead of waiting for the 60s poll plus
-# the repo-server's revision cache. "hard" also bypasses that cache.
-# Usage: git push && scripts/refresh-argocd
+# the repo-server's revision cache.
+#
+# Two things need nudging after a push. The ApplicationSets re-list the
+# repo's directories every three minutes; the refresh annotation makes them
+# do it now, so a new directory becomes an Application at once. Each
+# Application polls on its own; a hard refresh bypasses the revision cache
+# for the ones named on the command line, or for all of them when none is.
+#
+# Usage: git push && scripts/refresh-argocd [application ...]
 set -euo pipefail
-kubectl --context admin@grove -n argocd annotate application argocd \
-  argocd.argoproj.io/refresh=hard --overwrite
+k() { kubectl --context admin@grove -n argocd "$@"; }
+
+k annotate applicationset infra apps \
+  argocd.argoproj.io/application-set-refresh=true --overwrite
+
+if [ $# -eq 0 ]; then
+  k annotate application --all argocd.argoproj.io/refresh=hard --overwrite
+else
+  k annotate application "$@" argocd.argoproj.io/refresh=hard --overwrite
+fi
