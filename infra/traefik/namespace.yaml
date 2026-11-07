@@ -1,0 +1,9 @@
+# This directory owns the traefik namespace. It used to be created by
+# ArgoCD's CreateNamespace sync option, which leaves it unmanaged; shipping
+# the manifest makes it an ordinary tracked resource of this component.
+# The wildcard certificate Secret lives here too, because a Gateway can only
+# reference Secrets in its own namespace.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: traefik

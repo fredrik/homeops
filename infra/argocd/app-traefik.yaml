@@ -1,9 +1,5 @@
 # Traefik v3 as the Gateway API implementation. The chart and its values
 # are in infra/traefik/.
-#
-# Automated sync is off during the switch from chart source to directory
-# source, so a wrong render shows as a diff in the UI instead of being
-# applied. It comes back in the next commit.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -21,6 +17,9 @@ spec:
     server: https://kubernetes.default.svc
     namespace: traefik
   syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
     syncOptions:
       - ServerSideApply=true
       - ServerSideDiff=true
