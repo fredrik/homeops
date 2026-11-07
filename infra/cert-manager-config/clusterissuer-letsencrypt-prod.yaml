@@ -1,0 +1,25 @@
+# Let's Encrypt production. Identical to staging except for the ACME
+# server and account key. Rate limit to remember: 5 duplicate
+# certificates per week, so only point Certificates here once they have
+# gone Ready against staging.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt-prod-account-key
+    solvers:
+      - dns01:
+          webhook:
+            groupName: acme.fandango.cloud
+            solverName: porkbun
+            config:
+              apiKey:
+                name: porkbun-api-credentials
+                key: api-key
+              secretApiKey:
+                name: porkbun-api-credentials
+                key: secret-key

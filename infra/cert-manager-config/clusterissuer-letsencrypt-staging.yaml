@@ -1,0 +1,28 @@
+# Let's Encrypt staging: generous rate limits, certificates that browsers
+# reject. Use this to prove the DNS-01 path works before touching prod.
+# No contact email on purpose: it is optional, Let's Encrypt stopped
+# sending expiry notices in 2025, and this repo is public.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+spec:
+  acme:
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    # cert-manager stores the ACME account key here, in the cert-manager
+    # namespace (the cluster-resource namespace for ClusterIssuers).
+    privateKeySecretRef:
+      name: letsencrypt-staging-account-key
+    solvers:
+      - dns01:
+          webhook:
+            # Must match groupName in infra/argocd/app-porkbun-webhook.yaml.
+            groupName: acme.fandango.cloud
+            solverName: porkbun
+            config:
+              apiKey:
+                name: porkbun-api-credentials
+                key: api-key
+              secretApiKey:
+                name: porkbun-api-credentials
+                key: secret-key

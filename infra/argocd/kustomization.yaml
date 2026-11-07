@@ -8,6 +8,8 @@ resources:
   - app-metallb.yaml
   - app-traefik.yaml
   - app-cert-manager.yaml
+  - app-porkbun-webhook.yaml
+  - app-cert-manager-config.yaml
   - httproute.yaml
   - https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.7/manifests/install.yaml
 patches:
