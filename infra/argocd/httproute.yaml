@@ -12,6 +12,9 @@ spec:
       kind: Gateway
       name: traefik-gateway
       namespace: traefik
+      # Without sectionName a route attaches to every listener; pin it to
+      # HTTPS so plain HTTP is left to the redirect route.
+      sectionName: websecure
   hostnames:
     - argocd.fandango.cloud
   rules:

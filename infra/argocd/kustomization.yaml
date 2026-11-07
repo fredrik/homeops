@@ -11,6 +11,7 @@ resources:
   - app-porkbun-webhook.yaml
   - app-cert-manager-config.yaml
   - httproute.yaml
+  - httproute-redirect.yaml
   - https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.7/manifests/install.yaml
 patches:
   - path: argocd-cm-patch.yaml

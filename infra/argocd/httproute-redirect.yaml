@@ -1,0 +1,27 @@
+# Plain-HTTP side of argocd.fandango.cloud: answer every request with a
+# permanent redirect to https. A RequestRedirect filter needs no
+# backendRefs. Same explicitness rules as httproute.yaml.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: argocd-server-redirect
+  namespace: argocd
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: traefik-gateway
+      namespace: traefik
+      sectionName: web
+  hostnames:
+    - argocd.fandango.cloud
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301
