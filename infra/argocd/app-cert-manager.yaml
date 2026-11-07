@@ -1,0 +1,41 @@
+# cert-manager, rendered from the jetstack Helm chart by ArgoCD. Only the
+# operator lives here; issuers and certificates come in a later wave once
+# the CRDs exist.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+spec:
+  project: default
+  source:
+    repoURL: https://charts.jetstack.io
+    chart: cert-manager
+    targetRevision: v1.21.3
+    helm:
+      valuesObject:
+        crds:
+          # Let the chart ship its CRDs so ArgoCD manages them with the rest.
+          enabled: true
+          # Keep the CRDs if the release is ever removed. Deleting them would
+          # garbage-collect every Certificate and Issuer in the cluster.
+          keep: true
+        config:
+          # Lets cert-manager watch Gateway API objects, so a Gateway can
+          # request its own certificate via an annotation later. Harmless
+          # while we use explicit Certificate resources.
+          gatewayAPI:
+            enabled: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - ServerSideDiff=true
