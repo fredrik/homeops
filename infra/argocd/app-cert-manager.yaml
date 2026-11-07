@@ -1,6 +1,10 @@
-# cert-manager, rendered from the jetstack Helm chart by ArgoCD. Only the
-# operator lives here; issuers and certificates come in a later wave once
-# the CRDs exist.
+# cert-manager. Only the operator lives here; issuers and certificates come
+# in a later wave once the CRDs exist. The chart and its values are in
+# infra/cert-manager/.
+#
+# Automated sync is off during the switch from chart source to directory
+# source, so a wrong render shows as a diff in the UI instead of being
+# applied. It comes back in the next commit.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -11,31 +15,13 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://charts.jetstack.io
-    chart: cert-manager
-    targetRevision: v1.21.3
-    helm:
-      valuesObject:
-        crds:
-          # Let the chart ship its CRDs so ArgoCD manages them with the rest.
-          enabled: true
-          # Keep the CRDs if the release is ever removed. Deleting them would
-          # garbage-collect every Certificate and Issuer in the cluster.
-          keep: true
-        config:
-          # Lets cert-manager watch Gateway API objects, so a Gateway can
-          # request its own certificate via an annotation later. Harmless
-          # while we use explicit Certificate resources.
-          gatewayAPI:
-            enabled: true
+    repoURL: https://github.com/fredrik/homeops.git
+    targetRevision: main
+    path: infra/cert-manager
   destination:
     server: https://kubernetes.default.svc
     namespace: cert-manager
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
     syncOptions:
-      - CreateNamespace=true
       - ServerSideApply=true
       - ServerSideDiff=true
