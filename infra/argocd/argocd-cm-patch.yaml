@@ -5,3 +5,10 @@ metadata:
 data:
   # How often ArgoCD polls git for changes (default 180s)
   timeout.reconciliation: 60s
+  # Lets the repo-server render a kustomization that carries a helmCharts
+  # field. Helm components then live in a directory with a kustomization and
+  # a values.yaml like every other component, which is what lets the
+  # ApplicationSets discover them. The application-controller reads this key
+  # live and passes it to the repo-server with every manifest request, so no
+  # restart is needed after the ConfigMap syncs.
+  kustomize.buildOptions: --enable-helm

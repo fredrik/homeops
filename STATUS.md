@@ -19,21 +19,26 @@ observability, no workloads. The next phase is not yet chosen.
 
 ### Cluster
 
-| | | |---|---| | Talos | v1.11.3 | | Kubernetes | v1.34.1 | | Nodes |
-talos-control-{1..3}, talos-worker-{1..6} | | CNI | flannel | | Storage | none,
-no StorageClass | | kube context | admin@grove |
+|              |                                           |
+| ------------ | ----------------------------------------- |
+| Talos        | v1.11.3                                   |
+| Kubernetes   | v1.34.1                                   |
+| Nodes        | talos-control-{1..3}, talos-worker-{1..6} |
+| CNI          | flannel                                   |
+| Storage      | none, no StorageClass                     |
+| kube context | admin@grove                               |
 
 ### Platform components, in sync-wave order
 
-| Wave | Component | Version | Shape | Namespace | |---|---|---|---|---| | - |
-ArgoCD | v3.5.7 | upstream install.yaml + ConfigMap patches, self-managed |
-argocd | | 1 | Gateway API CRDs | v1.6.3 standard | upstream manifest | - | | 2
-| MetalLB | v0.16.2 | upstream manifest + L2 pool 10.9.8.60-69 | metallb-system
-| | 3 | Traefik | chart 42.3.0 (Traefik v3.7.17) | Helm, inline values | traefik
-| | 4 | cert-manager | chart v1.21.3 | Helm, inline values | cert-manager | | 5
-| Porkbun DNS-01 webhook | chart 2.0.8 | Helm, inline values | cert-manager | |
-6 | cert-manager config | - | ClusterIssuers staging and prod, wildcard
-Certificate | traefik |
+| Wave | Component              | Version                        | Shape                                                   | Namespace      |
+| ---- | ---------------------- | ------------------------------ | ------------------------------------------------------- | -------------- |
+| -    | ArgoCD                 | v3.5.7                         | upstream install.yaml + ConfigMap patches, self-managed | argocd         |
+| 1    | Gateway API CRDs       | v1.6.3 standard                | upstream manifest                                       | -              |
+| 2    | MetalLB                | v0.16.2                        | upstream manifest + L2 pool 10.9.8.60-69                | metallb-system |
+| 3    | Traefik                | chart 42.3.0 (Traefik v3.7.17) | Helm, inline values                                     | traefik        |
+| 4    | cert-manager           | chart v1.21.3                  | Helm, inline values                                     | cert-manager   |
+| 5    | Porkbun DNS-01 webhook | chart 2.0.8                    | Helm, inline values                                     | cert-manager   |
+| 6    | cert-manager config    | -                              | ClusterIssuers staging and prod, wildcard Certificate   | traefik        |
 
 ### Networking and TLS
 
@@ -80,6 +85,21 @@ hard-refreshes the app-of-apps after a push.
    HTTPS routing with HTTP redirect.
 1. **Housekeeping.** AGENTS.md rewritten with verified cluster facts, repo
    layout, gotchas and follow-ups.
+
+## In progress
+
+**Repo layout migration.** Two trees, `infra/` and `apps/`, discovered by
+ApplicationSets, with Helm charts rendered through kustomize `helmCharts` so
+every component is a directory. Plan and reasoning in
+`docs/plans/repo-layout.md`. Started 2026-11-07.
+
+| Phase | What                                                                         | State                                                                               |
+| ----- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| 0     | `.gitignore` for the `charts/` kustomize pulls                               | committed                                                                           |
+| 1     | `kustomize.buildOptions: --enable-helm` in `argocd-cm`                       | committed, awaiting push and verification                                           |
+| 2     | porkbun-webhook, cert-manager, traefik converted to `helmCharts` directories | not started                                                                         |
+| 3     | app-of-apps replaced by ApplicationSets                                      | not started; where the root lives (`infra/argocd` or `bootstrap/`) is being decided |
+| 4     | AGENTS.md, this file, `scripts/refresh-argocd`                               | not started                                                                         |
 
 ## Known issues and open decisions
 
