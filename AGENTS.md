@@ -105,7 +105,8 @@ scripts/     refresh-argocd
   Copy `infra/traefik/` for a Helm chart that owns its namespace (Namespace
   manifest, `helmCharts`, `includeCRDs`), `infra/porkbun-webhook/` for one that
   lives in another component's namespace, `infra/metallb/` for an upstream
-  manifest. The directory name becomes the Application name, so it must be a
+  manifest, `infra/local-path-provisioner/` for an upstream manifest that needs
+  patches. The directory name becomes the Application name, so it must be a
   valid DNS label (lowercase, digits, hyphens, at most 63 characters), unique
   across both trees, and never `bootstrap`, which the generators exclude. Every
   namespaced resource must carry its namespace; the template's destination
@@ -125,6 +126,17 @@ scripts/     refresh-argocd
   hand-made Secret (name, namespace, keys) in the header comment of the
   kustomization that needs it, as `infra/porkbun-webhook/kustomization.yaml`
   does.
+- Talos machine config is outside ArgoCD. When a component needs a Talos change
+  (so far: the kubelet extraMount for local-path), Fredrik applies it with
+  `talosctl patch mc`, and it is documented like a hand-made Secret: in the
+  header comment of the kustomization that needs it, and under hand-made objects
+  in STATUS.md.
+- PersistentVolumeClaims in git carry
+  `argocd.argoproj.io/sync-options: Prune=false`. A namespace move is a delete
+  plus a create, and with reclaim `Delete` the prune wipes the data. Before a
+  planned move, patch the PV's reclaim policy to `Retain` by hand. `local-path`
+  is scratch storage: one copy on one worker's disk, never for data anyone would
+  miss.
 - Removing a directory removes its Application and orphans its resources
   (`preserveResourcesOnDeletion`). Cleaning up is deliberate and manual, and
   includes cluster-scoped resources: CRDs, ClusterRoles, APIServices,
@@ -132,6 +144,17 @@ scripts/     refresh-argocd
 
 ## Gotchas that have bitten
 
+- The Talos kubelet sees only the host paths Talos bind-mounts into its
+  container: `/var/lib/kubelet`, `/var/lib/containerd`, the log directories, and
+  `/var/mnt` read-only as the propagation point for user volumes. A hostPath
+  anywhere else under `/var` fails with "read-only file system" or "no such file
+  or directory" from the kubelet, however writable it is on the host. The fix is
+  a `machine.kubelet.extraMounts` bind mount, applied without a reboot, or a
+  user volume on a second disk.
+- local-path-provisioner reloads its ConfigMap without logging it. Check the
+  PV's creation timestamp before concluding nothing happened; a
+  `rollout restart` was once ordered for a claim that had bound three hours
+  earlier.
 - ArgoCD syncing a ConfigMap restarts nothing. argocd-server and the
   application-controller read `argocd-cmd-params-cm` into env only at pod start.
   Check the key is live in the cluster before any `rollout restart`. Keys in

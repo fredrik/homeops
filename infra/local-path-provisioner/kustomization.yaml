@@ -14,6 +14,12 @@
 #
 # The upstream manifest is pinned by version in the URL and patched for Talos
 # in the files beside this one. There is no published Helm chart.
+#
+# Hand-made change outside this repo: machine.kubelet.extraMounts on every
+# worker, bind-mounting /var/local-path-provisioner into the kubelet
+# container (bind, rshared, rw). Applied 2026-11-08 with talosctl patch mc,
+# no reboot. Without it the kubelet cannot see the directory at all; the why
+# is in config-patch.yaml. A rebuilt worker needs it again.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
