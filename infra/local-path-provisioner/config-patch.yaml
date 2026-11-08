@@ -1,0 +1,31 @@
+# Upstream defaults to /opt/local-path-provisioner. On Talos the only
+# writable, persistent filesystem is the EPHEMERAL partition mounted at /var,
+# which on our workers is the whole 137 GB virtio disk minus a few hundred MB
+# of Talos state, so the path has to live under /var. /var/mnt is the
+# directory Talos reserves for mounts, and this exact path is where the Talos
+# docs mount a dedicated user volume for local-path. We have no spare disk
+# for one today, so the directory sits on EPHEMERAL itself; if a user volume
+# is carved out later it mounts here and the provisioner never notices.
+#
+# Sharing EPHEMERAL means a runaway volume competes with the container image
+# cache and pod logs for the same space, and can push the node into disk
+# pressure. Acceptable for scratch data; the reason not to put a database on
+# this class.
+#
+# The patch replaces only the config.json key. setup, teardown and the helper
+# pod template stay as upstream ships them.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: local-path-config
+  namespace: local-path-storage
+data:
+  config.json: |-
+    {
+      "nodePathMap": [
+        {
+          "node": "DEFAULT_PATH_FOR_NON_LISTED_NODES",
+          "paths": ["/var/mnt/local-path-provisioner"]
+        }
+      ]
+    }

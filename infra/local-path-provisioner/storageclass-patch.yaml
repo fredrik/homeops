@@ -1,0 +1,16 @@
+# The only StorageClass on the cluster, so it is the default: a PVC that
+# names no storageClassName binds here instead of hanging in Pending forever.
+# Revisit when Proxmox CSI lands; the default should then be the class whose
+# data survives a node rebuild, and this one is requested by name.
+#
+# Upstream already sets WaitForFirstConsumer, which is what makes local-path
+# work at all: the provisioner cannot pick a node at PVC creation time, so it
+# waits until the scheduler has placed the pod and creates the directory on
+# that pod's node. The control planes carry Talos's NoSchedule taint, so that
+# node is always a worker.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-path
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"

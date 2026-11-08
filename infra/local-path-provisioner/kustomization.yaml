@@ -1,0 +1,24 @@
+# Rancher's local-path-provisioner: the first StorageClass on Grove, and the
+# simplest one possible. A PersistentVolume is a directory on the worker the
+# pod was scheduled to, created by a short-lived helper pod. One copy, no
+# replication, no migration: the data lives and dies with that worker's disk.
+# That makes it scratch storage for things that can be regenerated (metrics,
+# logs, caches), not for data anyone would miss. Real volumes come later from
+# the Proxmox CSI driver, as a second StorageClass beside this one.
+#
+# Why this over Longhorn or Rook: every worker is a VM with a single virtio
+# disk owned entirely by Talos, so there is no spare block device to hand to a
+# storage system, and replicating across VMs that share one NVMe protects
+# nothing. local-path needs no Talos extensions, no machine config change and
+# no credential.
+#
+# The upstream manifest is pinned by version in the URL and patched for Talos
+# in the files beside this one. There is no published Helm chart.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.37/deploy/local-path-storage.yaml
+patches:
+  - path: namespace-patch.yaml
+  - path: config-patch.yaml
+  - path: storageclass-patch.yaml

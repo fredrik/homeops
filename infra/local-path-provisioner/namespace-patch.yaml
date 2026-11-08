@@ -1,0 +1,13 @@
+# Talos enforces the Pod Security "baseline" level on every namespace except
+# kube-system. Baseline forbids hostPath volumes, and hostPath is the whole
+# point here: the helper pod mounts the node's directory to create and remove
+# volume directories. Labelling the namespace "privileged" turns enforcement
+# off for this namespace only; the provisioner's own Deployment does not need
+# it, but the helper pods it spawns do. Warn and audit stay at Talos's
+# defaults, so a kubectl apply here still prints restricted-level warnings.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: local-path-storage
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
