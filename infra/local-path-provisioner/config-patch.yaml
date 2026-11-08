@@ -1,11 +1,19 @@
-# Upstream defaults to /opt/local-path-provisioner. On Talos the only
-# writable, persistent filesystem is the EPHEMERAL partition mounted at /var,
-# which on our workers is the whole 137 GB virtio disk minus a few hundred MB
-# of Talos state, so the path has to live under /var. /var/mnt is the
-# directory Talos reserves for mounts, and this exact path is where the Talos
-# docs mount a dedicated user volume for local-path. We have no spare disk
-# for one today, so the directory sits on EPHEMERAL itself; if a user volume
-# is carved out later it mounts here and the provisioner never notices.
+# Upstream defaults to /opt/local-path-provisioner, which is read-only on
+# Talos. The only writable, persistent filesystem is the EPHEMERAL partition
+# mounted at /var, which on our workers is the whole 137 GB virtio disk minus
+# a few hundred MB of Talos state, so the path has to live under /var.
+#
+# Not just any path under /var, though. The kubelet runs in a container and
+# sees only the host paths Talos bind-mounts into it: /var/lib/kubelet,
+# /var/lib/containerd, /var/log/pods and friends, and /var/mnt read-only so
+# that user volumes mounted beneath it can propagate in. A directory of our
+# own under /var is invisible to the kubelet until it is added as a
+# machine.kubelet.extraMounts bind mount; the first attempt here used
+# /var/mnt/local-path-provisioner and failed with "read-only file system"
+# from the kubelet. The matching extraMount on every worker is a Talos
+# machine config change, applied with talosctl, outside this repo and
+# outside ArgoCD. The Talos docs' alternative is a dedicated user volume on
+# a second disk, which also gives isolation from EPHEMERAL; a follow-up.
 #
 # Sharing EPHEMERAL means a runaway volume competes with the container image
 # cache and pod logs for the same space, and can push the node into disk
@@ -25,7 +33,7 @@ data:
       "nodePathMap": [
         {
           "node": "DEFAULT_PATH_FOR_NON_LISTED_NODES",
-          "paths": ["/var/mnt/local-path-provisioner"]
+          "paths": ["/var/local-path-provisioner"]
         }
       ]
     }
